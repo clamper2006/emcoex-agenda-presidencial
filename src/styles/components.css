@@ -1,0 +1,204 @@
+/* ---------- Backgrounds ---------- */
+.bg-mesh {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(247,148,29,0.22), transparent),
+    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(21,148,66,0.12), transparent),
+    var(--bg-void);
+}
+[data-theme="light"] .bg-mesh {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(217,122,10,0.12), transparent),
+    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(15,125,56,0.08), transparent),
+    var(--bg-void);
+}
+
+.bg-noise { position: relative; }
+.bg-noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---------- Glass panels ---------- */
+.glass {
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle);
+}
+[data-theme="light"] .glass { background: rgba(255,255,255,0.7); }
+
+.glass-strong {
+  background: rgba(20,20,28,0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-subtle);
+}
+[data-theme="light"] .glass-strong { background: rgba(255,255,255,0.85); }
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+.card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px -20px rgba(0,0,0,0.6);
+}
+[data-theme="light"] .card:hover { box-shadow: 0 20px 40px -20px rgba(0,0,0,0.1); }
+
+/* ---------- Buttons ---------- */
+/* Plano y sólido a propósito: un solo color (var(--accent), el naranja de
+   marca), sin degradado ni sombra de reposo. Texto oscuro en vez de blanco
+   porque naranja + blanco no llega a 4.5:1 de contraste (WCAG AA); naranja
+   + texto oscuro sí (~8:1). El único movimiento es un leve oscurecido al
+   pasar el mouse, sin elevación ni glow. */
+.btn-primary {
+  background: var(--accent);
+  color: #17130a;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background-color 0.15s ease;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:active { background: var(--accent-hover); }
+
+.btn-ghost {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+.btn-ghost:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: var(--border-strong);
+}
+[data-theme="light"] .btn-ghost { background: rgba(0,0,0,0.03); }
+[data-theme="light"] .btn-ghost:hover { background: rgba(0,0,0,0.06); }
+
+/* ---------- Sidebar nav ---------- */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.18s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.nav-item:hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary);
+}
+[data-theme="light"] .nav-item:hover { background: rgba(0,0,0,0.05); }
+
+.nav-item.active {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------- Role badge ---------- */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Toast ---------- */
+#toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.toast {
+  min-width: 300px;
+  max-width: 380px;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  box-shadow: 0 20px 40px -12px rgba(0,0,0,0.7);
+}
+[data-theme="light"] .toast { box-shadow: 0 20px 40px -12px rgba(0,0,0,0.15); }
+
+/* ---------- Modal ---------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4,4,8,0.7);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+}
+[data-theme="light"] .modal-backdrop { background: rgba(255,255,255,0.7); }
+
+/* #mobile-sidebar comparte pantalla con .modal-backdrop. No es un empate
+   de especificidad: .modal-backdrop tiene z-index: 100 y el panel solo
+   tenía la utilidad .z-50 (z-index: 50) — 100 le gana a 50 directamente,
+   sin depender del orden de imports entre layout.css y components.css.
+   El backdrop terminaba pintándose por encima del propio panel: al abrir
+   el menú solo se veía el blur, sin nav. Fix: subir el panel por encima
+   del backdrop con un z-index explícito más alto. */
+#mobile-sidebar { z-index: 110; }
+
+/* ---------- Inputs ---------- */
+.input-field {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: all 0.18s ease;
+  width: 100%;
+}
+[data-theme="light"] .input-field { background: rgba(0,0,0,0.02); }
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+  background: rgba(255,255,255,0.05);
+}
+[data-theme="light"] .input-field:focus { background: rgba(0,0,0,0.04); }
+
+.input-field::placeholder { color: var(--text-tertiary); }
+
+/* ---------- Role select card ---------- */
+.role-card {
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+.role-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 24px 48px -20px var(--accent-glow);
+}
+.role-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  box-shadow: 0 0 0 1px var(--accent), 0 24px 48px -20px var(--accent-glow);
+}
+
+/* ---------- Table rows ---------- */
+.table-row { transition: background 0.15s ease; }
+.table-row:hover { background: rgba(255,255,255,0.03); }
+[data-theme="light"] .table-row:hover { background: rgba(0,0,0,0.02); }

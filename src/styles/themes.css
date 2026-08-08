@@ -1,0 +1,41 @@
+:root {
+  --bg-void: #08080c;
+  --bg-surface: #0f0f16;
+  --bg-elevated: #15151f;
+  --border-subtle: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.14);
+  /* Paleta EMCOEX: naranja del sol del isotipo como acento principal,
+     verde de la hoja como acento secundario (degradados, badges, gráficos). */
+  --accent: #f7941d;
+  --accent-2: #159442;
+  --accent-hover: #ffa53b;
+  --accent-tint: rgba(247,148,29,0.12);
+  --accent-glow: rgba(247,148,29,0.35);
+  --text-primary: #f4f4f6;
+  --text-secondary: #9a9aa8;
+  --text-tertiary: #5c5c6b;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+}
+
+[data-theme="light"] {
+  --bg-void: #faf8f4;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f5f1e8;
+  --border-subtle: rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.14);
+  /* Naranja/verde algo más oscuros que en el tema oscuro, para mantener
+     el contraste con texto blanco sobre fondos claros (WCAG AA). */
+  --accent: #d97a0a;
+  --accent-2: #0f7d38;
+  --accent-hover: #c06d09;
+  --accent-tint: rgba(217,122,10,0.08);
+  --accent-glow: rgba(217,122,10,0.2);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #64748b;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+}
