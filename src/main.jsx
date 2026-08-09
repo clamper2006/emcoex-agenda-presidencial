@@ -3,12 +3,18 @@ import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App.jsx';
 
-// Mismo orden de carga que index.html original: themes -> base -> layout ->
-// components -> animations. El CSS no se reescribió, solo se importa tal
-// cual desde src/styles (Vite lo empaqueta y lo referencia con hash).
+// Orden de carga: tailwind (base + utilidades reales) -> themes -> base ->
+// components -> animations. tailwind.css va primero para que sus reglas de
+// utilidad no le ganen la cascada a los overrides de marca (--accent,
+// .btn-primary, .card, etc.) que vienen después.
+// Iteración (instalación real de Tailwind): layout.css se eliminó — era
+// casi en su totalidad un clon incompleto a mano de utilidades de Tailwind
+// (min-h-screen, flex, gap-*, grid-cols-*, md:*, etc.), ahora generadas de
+// verdad por Tailwind. Las 2 clases de ese archivo que no eran Tailwind
+// (.bg-brand-glow, .bg-brand-preview-bar) se movieron a components.css.
+import './styles/tailwind.css';
 import './styles/themes.css';
 import './styles/base.css';
-import './styles/layout.css';
 import './styles/components.css';
 import './styles/animations.css';
 

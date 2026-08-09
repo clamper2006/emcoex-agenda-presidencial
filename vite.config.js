@@ -1,13 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import tailwindcss from '@tailwindcss/vite';
 
 // Nombre del repositorio en GitHub. GitHub Pages sirve el sitio en
 // https://<usuario>.github.io/<REPO_NAME>/, así que "base" debe coincidir
 // exactamente con el nombre del repo para que los assets del build (JS/CSS
 // con hash) se resuelvan bien bajo ese subpath.
 // Confirmado: https://clamper2006.github.io/Emcoex-Sistema-App/
-const REPO_NAME = 'emcoex-agenda-presidencial';
+const REPO_NAME = 'Emcoex-Sistema-App';
 
 export default defineConfig({
   base: `/${REPO_NAME}/`,
@@ -38,6 +39,16 @@ export default defineConfig({
     },
   },
   plugins: [
+    // Tailwind real (Iteración: instalación de raíz). Todo el JSX ya usaba
+    // clases estilo Tailwind (flex, gap-3, md:sticky, -translate-x-full,
+    // transition-transform, disabled:opacity-60, etc.) pero Tailwind nunca
+    // estuvo instalado — había un subconjunto de CSS a mano en
+    // src/styles/layout.css y base.css tratando de clonarlo, incompleto
+    // (por eso el sidebar nunca se ocultaba en móvil: -translate-x-full,
+    // translate-x-0, transition-transform y md:sticky no existían). El
+    // plugin de Vite de Tailwind v4 no necesita tailwind.config.js ni
+    // content: [...] — escanea los archivos del proyecto automáticamente.
+    tailwindcss(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',

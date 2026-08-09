@@ -20,10 +20,6 @@ body {
 .divider-line { border-color: var(--border-subtle); }
 .grain-overlay { pointer-events: none; }
 
-@media (max-width: 768px) {
-  .sidebar-mobile-hidden { display: none; }
-}
-
 /* ---------- Screens ---------- */
 .screen { display: none; }
 .screen.active { display: block; }

@@ -1,0 +1,9 @@
+/* Tailwind real (Iteración: instalación de raíz).
+   Antes de esta iteración este archivo no existía: el JSX de toda la app
+   ya usaba clases estilo Tailwind, pero el paquete nunca se instaló —
+   layout.css/base.css tenían un subconjunto clonado a mano e incompleto
+   en su lugar. Se importa primero (ver src/main.jsx) para que las capas
+   base/utilities de Tailwind carguen antes que themes.css/components.css,
+   así los overrides de marca (--accent, .btn-primary, .card, etc.) siguen
+   ganando la cascada tal como ya asumía el resto del CSS a mano. */
+@import "tailwindcss";

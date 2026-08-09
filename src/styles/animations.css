@@ -59,3 +59,43 @@
    se resuelve la sesión de Supabase / el rol del usuario. */
 @keyframes spin { to { transform: rotate(360deg); } }
 .animate-spin { animation: spin 0.8s linear infinite; }
+
+/* ---------- Tutorial de bienvenida (WelcomeTour) ---------- */
+/* Un ícono animado distinto por paso, relacionado a lo que describe, en
+   vez de reciclar una sola animación genérica para los 5 pasos. */
+
+/* Dashboard: pulso suave, como datos actualizándose en vivo. */
+@keyframes tourPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.tour-icon-pulse { animation: tourPulse 1.8s ease-in-out infinite; }
+
+/* Cierres mensuales: "pop" con leve giro, como un check al confirmar. */
+@keyframes tourPop {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.12) rotate(-6deg); }
+}
+.tour-icon-pop { animation: tourPop 1.6s ease-in-out infinite; }
+
+/* Despachos: balanceo lateral, como un barco navegando. */
+@keyframes tourSail {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(3px) rotate(3deg); }
+  75% { transform: translateX(-3px) rotate(-3deg); }
+}
+.tour-icon-sail { animation: tourSail 2.2s ease-in-out infinite; }
+
+/* Proveedores: elevación suave, como un directorio que crece. */
+@keyframes tourRise {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.tour-icon-rise { animation: tourRise 1.9s ease-in-out infinite; }
+
+/* Exportar PDF: el ícono "cae" y rebota, como file-down descargando. */
+@keyframes tourDrop {
+  0%, 100% { transform: translateY(-4px); opacity: 0.75; }
+  50% { transform: translateY(3px); opacity: 1; }
+}
+.tour-icon-drop { animation: tourDrop 1.6s ease-in-out infinite; }

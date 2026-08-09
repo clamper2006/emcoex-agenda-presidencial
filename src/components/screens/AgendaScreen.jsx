@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Icon from '../common/Icon.jsx';
+import WelcomeTour from '../common/WelcomeTour.jsx';
 import KpiGrid from '../dashboard/KpiGrid.jsx';
 import LineChart from '../dashboard/LineChart.jsx';
 import DonutChart from '../dashboard/DonutChart.jsx';
@@ -9,6 +10,7 @@ import { useTheme } from '../../context/ThemeContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { getRecords, saveRecord, deleteRecordItem } from '../../utils/storage.js';
+import { hasSeenTour } from '../../utils/onboarding.js';
 import { SECTIONS, computeKpis } from '../../data/agendaConfig.js';
 import { exportGeneralPdf, exportSectionPdf } from '../../lib/pdfReport.js';
 
@@ -22,6 +24,7 @@ const NAV = [
 export default function AgendaScreen() {
   const [tab, setTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showTour, setShowTour] = useState(false);
   const [version, setVersion] = useState(0); // fuerza refresco tras guardar/borrar
   const [dataBySection, setDataBySection] = useState({ cierres: [], despachos: [], proveedores: [] });
   const [loading, setLoading] = useState(true);
@@ -29,6 +32,14 @@ export default function AgendaScreen() {
   const { theme, toggleTheme } = useTheme();
   const { showToast } = useToast();
   const { user, signOut } = useAuth();
+
+  // Tutorial de bienvenida: se muestra solo la primera vez (marca en
+  // localStorage vía utils/onboarding.js, preferencia de UI, no dato de
+  // negocio — no toca Supabase). "Ver tutorial" en el sidebar permite
+  // volver a verlo manualmente cuando sea.
+  useEffect(() => {
+    if (!hasSeenTour()) setShowTour(true);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -108,6 +119,8 @@ export default function AgendaScreen() {
 
   return (
     <div className="min-h-screen flex">
+      {showTour && <WelcomeTour onClose={() => setShowTour(false)} />}
+
       {/* Sidebar */}
       <aside className={`fixed md:sticky top-0 z-40 h-screen w-64 glass-strong flex flex-col transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="flex items-center gap-2 px-5 py-5">
@@ -122,7 +135,7 @@ export default function AgendaScreen() {
             <button
               key={item.id}
               onClick={() => { setTab(item.id); setSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${tab === item.id ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${tab === item.id ? 'bg-[var(--accent-tint)] text-[var(--accent)]' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}
             >
               <Icon name={item.icon} className="w-4 h-4" />
               {item.label}
@@ -130,6 +143,10 @@ export default function AgendaScreen() {
           ))}
         </nav>
         <div className="p-3 border-t border-[var(--border-subtle)] space-y-1">
+          <button onClick={() => setShowTour(true)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:bg-white/5">
+            <Icon name="help-circle" className="w-4 h-4" />
+            Ver tutorial
+          </button>
           <button onClick={() => exportGeneralPdf(dataBySection)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:bg-white/5">
             <Icon name="file-down" className="w-4 h-4" />
             Reporte general PDF

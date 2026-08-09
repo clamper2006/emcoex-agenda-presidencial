@@ -61,11 +61,14 @@ export default function LoginScreen() {
             {googleLoading ? 'Redirigiendo a Google…' : 'Continuar con Google'}
           </button>
         </div>
-        <p className="text-center text-xs text-[var(--text-tertiary)] mt-6">
-          <button onClick={() => navigate('/landing')} className="hover:text-white transition inline-flex items-center gap-1">
+        <div className="text-center mt-6">
+          <button
+            onClick={() => navigate('/landing')}
+            className="btn-ghost rounded-xl py-2 px-4 text-xs font-medium inline-flex items-center gap-1.5"
+          >
             <Icon name="arrow-left" className="w-3.5 h-3.5" /> Volver al inicio
           </button>
-        </p>
+        </div>
       </div>
     </section>
   );

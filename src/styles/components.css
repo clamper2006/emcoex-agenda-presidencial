@@ -12,6 +12,18 @@
     var(--bg-void);
 }
 
+/* Reemplaza los tokens de marca antiguos (indigo/purple) que antes vivían
+   en layout.css como from-indigo-500/to-purple-500/etc. Con paleta de marca
+   fija (naranja→verde) no hace falta un sistema tipo Tailwind con variables
+   --tw-gradient-*, así que estas son reglas directas y con nombre — no son
+   utilidades de Tailwind, por eso siguen a mano en vez de instalarse con el
+   paquete. Movidas aquí desde layout.css al eliminarlo (ese archivo era, en
+   el resto de su contenido, un clon incompleto de utilidades de Tailwind). */
+.bg-brand-glow { background-color: rgba(247, 148, 29, 0.18); }
+.bg-brand-preview-bar {
+  background-image: linear-gradient(to right, rgba(247,148,29,0.12), rgba(21,148,66,0.1), transparent);
+}
+
 .bg-noise { position: relative; }
 .bg-noise::before {
   content: '';

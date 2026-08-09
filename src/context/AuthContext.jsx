@@ -1,20 +1,15 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient.js';
 
-// Agenda Emcoex — etapa de prueba (Iteración 2): CUALQUIER cuenta de
-// Google autenticada puede entrar, sin lista de emails permitidos. No
-// existe tabla `usuarios` con roles. El aislamiento de datos entre
-// cuentas NO lo da esta pantalla de login — lo da RLS en Supabase
-// (usuario_id = auth.uid() en cada tabla, ver supabase/agenda_schema.sql):
-// cada cuenta ve y edita solo sus propias filas, nunca las de otra
-// cuenta, aunque ambas puedan entrar a la misma app.
-//
-// Esto es intencional para esta etapa: el presidente y su socio prueban
-// la app cada uno con su propia cuenta de Google, con datos
-// completamente separados entre sí, antes de decidir si se restringe a
-// un solo email en una versión posterior.
+// Agenda Emcoex — versión de un solo usuario (el presidente).
+// A diferencia del ERP-Comex original, aquí NO existe tabla `usuarios`
+// con roles: cualquier cuenta de Google que inicie sesión y cuyo email
+// coincida con VITE_PRESIDENTE_EMAIL entra. No hay estados de rol
+// (pending/assigned), solo: sin sesión / sesión válida / sesión no autorizada.
 
 const AuthContext = createContext(null);
+
+const PRESIDENTE_EMAIL = (import.meta.env.VITE_PRESIDENTE_EMAIL || '').toLowerCase().trim();
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
@@ -45,9 +40,14 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // Cualquier sesión válida está autorizada a entrar. Quién ve qué datos
-  // ya no se decide aquí, lo decide RLS por usuario_id en Supabase.
-  const isAuthorized = Boolean(session);
+  const userEmail = session?.user?.email?.toLowerCase().trim() ?? null;
+
+  // Si no se configuró VITE_PRESIDENTE_EMAIL, se permite cualquier
+  // cuenta autenticada (útil en desarrollo local). En producción
+  // SIEMPRE debe estar configurado.
+  const isAuthorized = session
+    ? (!PRESIDENTE_EMAIL || userEmail === PRESIDENTE_EMAIL)
+    : false;
 
   async function signInWithGoogle() {
     if (!isSupabaseConfigured) {

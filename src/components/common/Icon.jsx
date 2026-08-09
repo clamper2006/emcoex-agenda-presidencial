@@ -1,4 +1,4 @@
-import { Activity, AlertCircle, AlertTriangle, Archive, ArrowLeft, ArrowRight, Award, BarChart3, BookOpen, Boxes, Briefcase, Building2, Calculator, Camera, Car, Check, CheckCircle, CheckSquare, ClipboardCheck, ClipboardList, Clock, CreditCard, DollarSign, FileBarChart, FileCheck, FileSearch, FileText, Files, Flag, FolderOpen, GitCommit, Globe, HelpCircle, History, Inbox, Info, Landmark, LayoutDashboard, ListChecks, Loader2, Lock, LogOut, Mail, Map, MapPin, Menu, Moon, PenTool, PieChart, RefreshCw, Route, Save, Search, Settings, Shield, ShieldAlert, ShieldCheck, Ship, Star, Sun, Target, Timer, Trash2, TrendingUp, Truck, Users, Warehouse, X, Zap } from 'lucide-react';
+import { Activity, AlertCircle, AlertTriangle, Archive, ArrowLeft, ArrowRight, Award, BarChart3, BookOpen, Boxes, Briefcase, Building2, Calculator, CalendarCheck, Camera, Car, Check, CheckCircle, CheckSquare, ClipboardCheck, ClipboardList, Clock, CreditCard, DollarSign, FileBarChart, FileCheck, FileDown, FileSearch, FileText, Files, Flag, FolderOpen, GitCommit, Globe, HelpCircle, History, Inbox, Info, Landmark, LayoutDashboard, ListChecks, Loader2, Lock, LogOut, Mail, Map, MapPin, Menu, Moon, PenTool, Percent, PieChart, Plus, RefreshCw, Route, Save, Search, Settings, Shield, ShieldAlert, ShieldCheck, Ship, Star, Sun, Target, Timer, Trash2, TrendingDown, TrendingUp, Truck, Users, Warehouse, X, Zap } from 'lucide-react';
 
 // Antes los íconos venían de data-lucide="nombre-kebab" + el script CDN de
 // unpkg (lucide.createIcons()). Ahora usamos el paquete lucide-react
@@ -25,6 +25,7 @@ const ICONS = {
   'briefcase': Briefcase,
   'building-2': Building2,
   'calculator': Calculator,
+  'calendar-check': CalendarCheck,
   'camera': Camera,
   'car': Car,
   'check': Check,
@@ -37,6 +38,7 @@ const ICONS = {
   'dollar-sign': DollarSign,
   'file-bar-chart': FileBarChart,
   'file-check': FileCheck,
+  'file-down': FileDown,
   'file-search': FileSearch,
   'file-text': FileText,
   'files': Files,
@@ -60,7 +62,9 @@ const ICONS = {
   'menu': Menu,
   'moon': Moon,
   'pen-tool': PenTool,
+  'percent': Percent,
   'pie-chart': PieChart,
+  'plus': Plus,
   'refresh-cw': RefreshCw,
   'route': Route,
   'save': Save,
@@ -75,6 +79,7 @@ const ICONS = {
   'target': Target,
   'timer': Timer,
   'trash-2': Trash2,
+  'trending-down': TrendingDown,
   'trending-up': TrendingUp,
   'truck': Truck,
   'users': Users,
