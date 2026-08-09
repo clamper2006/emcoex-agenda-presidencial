@@ -1,0 +1,71 @@
+name: Deploy a GitHub Pages
+
+# Se dispara solo con push a main, más un botón manual ("Run workflow" en
+# la pestaña Actions de GitHub, funciona igual desde el navegador del
+# celular) por si alguna vez hace falta reintentar sin subir un commit
+# nuevo.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Evita que dos despliegues corran pisándose si se suben varios commits
+# seguidos.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      # npm ci en vez de npm install: instala exactamente lo que dice
+      # package-lock.json (sin resolver versiones nuevas), lo cual es más
+      # rápido y 100% reproducible en CI — es la práctica estándar para
+      # pipelines automatizados.
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Estas dos variables tienen que existir como Secrets del
+      # repositorio (Settings → Secrets and variables → Actions) o el
+      # build sale sin configurar Supabase y el login con Google queda
+      # roto en el sitio publicado. Ver el resumen de este mensaje para
+      # los pasos exactos.
+      - name: Compilar (vite build)
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Preparar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir el build como artefacto de Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
