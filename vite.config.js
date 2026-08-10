@@ -7,8 +7,8 @@ import tailwindcss from '@tailwindcss/vite';
 // https://<usuario>.github.io/<REPO_NAME>/, así que "base" debe coincidir
 // exactamente con el nombre del repo para que los assets del build (JS/CSS
 // con hash) se resuelvan bien bajo ese subpath.
-// Confirmado: https://clamper2006.github.io/Emcoex-Sistema-App/
-const REPO_NAME = 'Emcoex-Sistema-App';
+// Confirmado: https://clamper2006.github.io/emcoex-agenda-presidencial/
+const REPO_NAME = 'emcoex-agenda-presidencial';
 
 export default defineConfig({
   base: `/${REPO_NAME}/`,

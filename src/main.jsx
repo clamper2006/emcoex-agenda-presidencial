@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App.jsx';
+import ErrorBoundary from './components/common/ErrorBoundary.jsx';
 
 // Orden de carga: tailwind (base + utilidades reales) -> themes -> base ->
 // components -> animations. tailwind.css va primero para que sus reglas de
@@ -25,6 +26,8 @@ registerSW({ immediate: true });
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>
 );

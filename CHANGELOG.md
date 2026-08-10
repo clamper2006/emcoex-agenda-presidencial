@@ -1,5 +1,31 @@
 # CHANGELOG — Agenda Presidencial Emcoex
 
+## Iteración 3 — Fix de pantalla en blanco (base de Vite desincronizada) + ErrorBoundary
+
+Estado: ✅ Completada
+
+Contexto: tras publicar la Iteración 2, la app cargaba en blanco en `https://clamper2006.github.io/emcoex-agenda-presidencial/` — confirmado en incógnito, no era caché. Se reprodujo el build de producción real (`npm run build`), sirviéndolo bajo el path exacto de GitHub Pages (`/emcoex-agenda-presidencial/`) y abriendo la página con un navegador real (Chromium vía Playwright) para leer la consola.
+
+Causa real confirmada (no era `WelcomeTour.jsx`): `vite.config.js` tenía `const REPO_NAME = 'Emcoex-Sistema-App'` — nombre de repo heredado del proyecto ERP-Comex original del que este proyecto partió, nunca actualizado al renombrar el repo a `emcoex-agenda-presidencial`. Con ese `base` incorrecto, `index.html` generado por el build pedía el script principal en `/Emcoex-Sistema-App/assets/index-*.js`, una ruta que no existe bajo el repo real → **404** → el navegador nunca descarga ni ejecuta el bundle de React → `#root` se queda vacío antes de que exista árbol de React alguno que envolver (por eso un ErrorBoundary por sí solo no lo hubiera arreglado).
+
+Cambios:
+
+- **`vite.config.js`**: `REPO_NAME` corregido de `'Emcoex-Sistema-App'` a `'emcoex-agenda-presidencial'`, para que coincida con el nombre real del repo y `base` resuelva los assets del build en la ruta que GitHub Pages sirve de verdad.
+- **`index.html`**: `<title>` y `<meta name="description">` seguían con texto de "ERP-Comex — Plataforma de Comercio Exterior" (arrastrados del proyecto original). Actualizados a "EMCOEX | Agenda Presidencial" y una descripción que refleja la app actual.
+- **`src/components/common/ErrorBoundary.jsx`** (nuevo): `class` component con `getDerivedStateFromError`/`componentDidCatch`, envuelve `<App />` en `src/main.jsx`. No es la causa del bug de esta iteración, pero se agrega como red de seguridad: si un componente futuro rompe durante el mount, se muestra un mensaje claro con botón "Recargar página" en vez de una pantalla en blanco silenciosa. El error real sigue quedando en `console.error` para debugging.
+- **`src/main.jsx`**: `<App />` ahora renderiza dentro de `<ErrorBoundary>`, sin tocar `AuthProvider`, `ThemeProvider`, `ToastProvider` ni el orden de imports de estilos.
+
+No se tocó: `AuthContext.jsx`, `supabaseClient` ni ningún util de `storage.js` — el bug era 100% de configuración de build/hosting, no de datos ni autenticación.
+
+Verificación (no solo compilación):
+
+- `npm run build` real, sin errores (2048 módulos transformados).
+- `dist/` servido con `python3 -m http.server` bajo un directorio `emcoex-agenda-presidencial/` (replicando el subpath real de GitHub Pages, no la raíz del dev server).
+- Navegador real (Chromium headless vía Playwright) abrió `/emcoex-agenda-presidencial/`, `/emcoex-agenda-presidencial/#/login` y `/emcoex-agenda-presidencial/#/agenda`: en los tres casos `#root` quedó con contenido (no vacío), el `<title>` mostró el texto corregido, y `/agenda` redirigió a `/login` sin sesión (comportamiento esperado de `RequireAuthorized`, no un bug). Único mensaje capturado en consola: una fuente de Google Fonts bloqueada por las restricciones de red del entorno de pruebas (no relacionado con el bug, no bloquea el render de la app).
+- No se probó el flujo real de login con Google/Supabase de punta a punta porque este entorno no tiene credenciales reales ni acceso de red a `supabase.co`; sí se confirmó que la pantalla de login renderiza sin errores y que las rutas protegidas redirigen correctamente sin sesión.
+
+---
+
 ## Iteración 2 — Tailwind CSS real, rediseño de PDF y tutorial de bienvenida
 
 Estado: ✅ Completada
