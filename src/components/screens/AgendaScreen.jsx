@@ -29,6 +29,7 @@ export default function AgendaScreen() {
   const [dataBySection, setDataBySection] = useState({ cierres: [], despachos: [], proveedores: [] });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false); // guardando/borrando (deshabilita botones)
+  const [exportingGeneral, setExportingGeneral] = useState(false); // generando el PDF general (deshabilita sus 2 botones)
   const { theme, toggleTheme } = useTheme();
   const { showToast } = useToast();
   const { user, signOut } = useAuth();
@@ -117,6 +118,31 @@ export default function AgendaScreen() {
     }
   }
 
+  // Iteración (fiabilidad de exportación repetida): antes los botones de
+  // "Reporte general PDF" llamaban a exportGeneralPdf directo en el
+  // onClick, sin estado de carga ni try/catch. Eso permitía dos problemas
+  // reales en móvil: (1) un segundo toque mientras la primera exportación
+  // todavía estaba generándose disparaba una segunda ejecución concurrente
+  // (cada una con su propio fetch del logo, su propio doc.save()), y (2)
+  // si algo fallaba (jsPDF, permisos de descarga del navegador, etc.) el
+  // error quedaba silencioso — el botón no daba ninguna señal y el usuario
+  // volvía a tocar pensando que no había pasado nada, agravando (1). Ahora:
+  // se ignora el click si ya hay una exportación en curso, se muestra
+  // estado de carga en el botón, y CUALQUIER resultado (éxito o error)
+  // libera el estado en el `finally` para que el botón quede disponible
+  // de inmediato para la próxima exportación.
+  async function handleExportGeneral() {
+    if (exportingGeneral) return;
+    setExportingGeneral(true);
+    try {
+      await exportGeneralPdf(dataBySection);
+    } catch {
+      showToast('error', 'Error', 'No se pudo generar el PDF. Intenta de nuevo.');
+    } finally {
+      setExportingGeneral(false);
+    }
+  }
+
   return (
     <div className="min-h-screen flex">
       {showTour && <WelcomeTour onClose={() => setShowTour(false)} />}
@@ -147,9 +173,9 @@ export default function AgendaScreen() {
             <Icon name="help-circle" className="w-4 h-4" />
             Ver tutorial
           </button>
-          <button onClick={() => exportGeneralPdf(dataBySection)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:bg-white/5">
-            <Icon name="file-down" className="w-4 h-4" />
-            Reporte general PDF
+          <button disabled={exportingGeneral} onClick={handleExportGeneral} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:bg-white/5 disabled:opacity-60">
+            <Icon name={exportingGeneral ? 'loader-2' : 'file-down'} className={`w-4 h-4 ${exportingGeneral ? 'animate-spin' : ''}`} />
+            {exportingGeneral ? 'Generando PDF…' : 'Reporte general PDF'}
           </button>
           <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:bg-white/5">
             <Icon name={theme === 'light' ? 'moon' : 'sun'} className="w-4 h-4" />
@@ -187,8 +213,9 @@ export default function AgendaScreen() {
                 <h1 className="text-xl font-bold">Resumen general</h1>
                 <p className="text-xs text-[var(--text-tertiary)]">{user?.email}</p>
               </div>
-              <button onClick={() => exportGeneralPdf(dataBySection)} className="btn-primary rounded-xl py-2.5 px-4 text-sm font-semibold flex items-center gap-2">
-                <Icon name="file-down" className="w-4 h-4" /> Exportar reporte general
+              <button disabled={exportingGeneral} onClick={handleExportGeneral} className="btn-primary rounded-xl py-2.5 px-4 text-sm font-semibold flex items-center gap-2 disabled:opacity-60">
+                <Icon name={exportingGeneral ? 'loader-2' : 'file-down'} className={`w-4 h-4 ${exportingGeneral ? 'animate-spin' : ''}`} />
+                {exportingGeneral ? 'Generando…' : 'Exportar reporte general'}
               </button>
             </header>
             <KpiGrid kpis={kpis} />
@@ -220,6 +247,7 @@ export default function AgendaScreen() {
             busy={busy}
             onSave={(values) => handleSave(tab, values)}
             onDelete={(id) => handleDelete(tab, id)}
+            showToast={showToast}
           />
         )}
       </main>
@@ -227,9 +255,22 @@ export default function AgendaScreen() {
   );
 }
 
-function SectionView({ sectionKey, records, busy, onSave, onDelete }) {
+function SectionView({ sectionKey, records, busy, onSave, onDelete, showToast }) {
   const config = SECTIONS[sectionKey];
   const [showForm, setShowForm] = useState(false);
+  const [exportingSection, setExportingSection] = useState(false); // ver comentario de handleExportGeneral en AgendaScreen
+
+  async function handleExportSection() {
+    if (exportingSection) return;
+    setExportingSection(true);
+    try {
+      await exportSectionPdf(sectionKey, config.label, records);
+    } catch {
+      showToast('error', 'Error', 'No se pudo generar el PDF. Intenta de nuevo.');
+    } finally {
+      setExportingSection(false);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -239,8 +280,9 @@ function SectionView({ sectionKey, records, busy, onSave, onDelete }) {
           <p className="text-xs text-[var(--text-tertiary)]">{records.length} registro(s)</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => exportSectionPdf(sectionKey, config.label, records)} className="btn-ghost rounded-xl py-2.5 px-4 text-sm font-medium flex items-center gap-2">
-            <Icon name="file-down" className="w-4 h-4" /> PDF de esta sección
+          <button disabled={exportingSection} onClick={handleExportSection} className="btn-ghost rounded-xl py-2.5 px-4 text-sm font-medium flex items-center gap-2 disabled:opacity-60">
+            <Icon name={exportingSection ? 'loader-2' : 'file-down'} className={`w-4 h-4 ${exportingSection ? 'animate-spin' : ''}`} />
+            {exportingSection ? 'Generando…' : 'PDF de esta sección'}
           </button>
           <button disabled={busy} onClick={() => setShowForm((v) => !v)} className="btn-primary rounded-xl py-2.5 px-4 text-sm font-semibold flex items-center gap-2 disabled:opacity-60">
             <Icon name={showForm ? 'x' : 'plus'} className="w-4 h-4" /> {showForm ? 'Cerrar' : 'Agregar'}

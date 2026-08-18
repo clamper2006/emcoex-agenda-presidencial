@@ -38,7 +38,7 @@ Soy el Product Owner y Tech Lead. Tú eres el Arquitecto Principal del proyecto.
 
 # REGLAS DE ESTE PROYECTO
 
-1. **Un solo usuario, sin roles.** La app la usa una sola persona (el presidente). No existe tabla de roles ni lógica de roles — `AuthContext.jsx` autoriza comparando el email de la cuenta de Google contra `VITE_PRESIDENTE_EMAIL`. Cualquier otra cuenta que inicie sesión ve una pantalla de "no autorizado".
+1. **Un solo usuario, sin roles.** La app la usa una sola persona (el presidente). No existe tabla de roles ni lógica de roles — `AuthContext.jsx` autoriza comparando el email de la cuenta de Google contra `VITE_PRESIDENTE_EMAIL`, **solo si esa variable está definida**. En la etapa actual de pruebas se deja sin definir a propósito, así que cualquier cuenta de Google autenticada entra; cuando se defina, cualquier otra cuenta verá una pantalla de "no autorizado". No reintroducir una whitelist fija en código — el filtro sigue siendo esa única variable de entorno.
 2. **Tablas propias, separadas del ERP archivado.** Nunca leer, escribir, ni referenciar tablas del esquema de `Emcoex-Sistema-App` (`erp_comex_schema.sql`). Todo lo nuevo va en tablas con prefijo `agenda_`.
 3. **RLS por dueño de fila, no por rol.** Cada tabla tiene columna `usuario_id uuid default auth.uid()`, y las 4 políticas (select/insert/update/delete) exigen `usuario_id = auth.uid()`. No se necesita una tabla `usuarios` ni un enum de roles para esto — es la forma más simple de proteger los datos server-side dado que solo hay un usuario autorizado.
 4. **No tocar autenticación.** El login con Google (PKCE) y la resolución de autorización por email ya funcionan (ver `AuthContext.jsx`) y no se tocan salvo pedido explícito.

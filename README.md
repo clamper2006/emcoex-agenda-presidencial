@@ -1,39 +1,52 @@
-# Agenda Emcoex — Presidencial
+# EMCOEX — Agenda Presidencial
 
-Pivote del proyecto ERP-Comex (multi-rol) hacia una agenda ejecutiva de un
-solo usuario: el presidente de Emcoex. Le permite capturar cierres
-mensuales, despachos y proveedores, ver estadísticas globales, y exportar
-todo (o cada sección) como PDF listo para imprimir.
+Agenda ejecutiva de bolsillo para el presidente de EMCOEX Lara: captura
+cierres mensuales, despachos y proveedores, ve estadísticas globales
+(KPIs, gráficos) y exporta todo — o cada sección por separado — como PDF
+listo para imprimir. Progressive Web App instalable.
 
 ## Origen de este repo
 
-Este proyecto nace de `erp-comex-react` (el ERP completo de 9 roles).
-Se reutilizaron: marca visual, hoja de estilos, componentes de gráficos
-(adaptados a datos reales), patrón de conexión a Supabase y el pipeline
-de despliegue. Se descartó: todo el sistema de roles, permisos y
-dashboards por rol (queda documentado en el repo viejo, sin tocar).
+Este proyecto partió de `erp-comex-react` (el ERP completo de 9 roles,
+archivado como `Emcoex-Sistema-App`) como punto de partida visual: se
+reutilizaron la marca, la hoja de estilos, el patrón de conexión a
+Supabase y el pipeline de despliegue. No comparte tablas, roles ni
+dashboards con ese proyecto — ver `AGENTS.md` para el detalle completo de
+la relación entre ambos.
 
 ## Stack
 
-- React 19 + Vite + React Router (HashRouter, compatible con GitHub Pages)
-- Supabase (Auth con Google) — por ahora los datos viven en LocalStorage,
-  listos para migrarse a tablas de Supabase cuando se decida
-- jsPDF + jspdf-autotable para los reportes
+- React 19 + Vite + Tailwind CSS 4
+- Supabase: autenticación (Google OAuth vía PKCE) y persistencia de datos
+  (tablas `agenda_cierres` / `agenda_despachos` / `agenda_proveedores`,
+  con Row Level Security por dueño de fila — ver `supabase/agenda_schema.sql`)
+- jsPDF + jspdf-autotable para los reportes exportables
+- vite-plugin-pwa (manifest + service worker, instalable como PWA)
+- Despliegue automático a GitHub Pages vía GitHub Actions
 
 ## Setup
 
 ```bash
 npm install
-cp .env.example .env   # completa tus credenciales de Supabase y el email del presidente
+cp .env.example .env   # completa tus credenciales de Supabase
 npm run dev
 ```
 
-## Próximos pasos sugeridos
+`VITE_PRESIDENTE_EMAIL` es opcional: si se deja sin definir (etapa actual
+de pruebas), cualquier cuenta de Google autenticada puede entrar. Cuando
+se defina, solo esa cuenta queda autorizada y el resto ve la pantalla "no
+autorizado" — ver `.env.example` y `AGENTS.md` para el detalle.
 
-1. Conectar `agenda_cierres` / `agenda_despachos` / `agenda_proveedores`
-   a tablas reales de Supabase (RLS: solo el email del presidente puede
-   leer/escribir) en vez de LocalStorage.
-2. Revisar con el presidente qué otros datos quiere ver además de las
-   3 secciones actuales (legal, personal, otro negocio, etc.)
-3. Pulir el diseño del PDF con el equipo (logo, colores exactos de marca).
-4. Deploy a GitHub Pages para compartir el link de preview.
+## Scripts
+
+```bash
+npm run dev       # servidor de desarrollo
+npm run build     # build de producción a dist/
+npm run preview   # sirve el build de dist/ localmente
+```
+
+## Documentación
+
+- `AGENTS.md` — arquitectura, decisiones y estado real del proyecto (única
+  fuente de verdad técnica; léelo antes de tocar código).
+- `CHANGELOG.md` — historial de iteraciones completadas.

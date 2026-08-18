@@ -34,20 +34,36 @@ const LOGO_URL = `${import.meta.env.BASE_URL}brand/emcoex-isotipo.png`;
 // doc.addImage(). Si falla (sin red, asset movido, etc.) se devuelve null
 // y el resto del PDF sigue funcionando con el wordmark de texto solo,
 // igual que antes de esta iteración — nunca bloquea la generación del PDF.
-async function loadIsotipoBase64() {
-  try {
-    const res = await fetch(LOGO_URL);
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(new Error('No se pudo leer el isotipo'));
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
+//
+// Iteración (fiabilidad de exportación repetida): antes esto se llamaba
+// una vez por cada exportación — cada click a "Exportar PDF" repetía
+// fetch → Blob → FileReader → base64 del mismo archivo estático que nunca
+// cambia. No era la causa del bloqueo (no hay nada ahí que "cuelgue" el
+// hilo), pero sí trabajo redundante en cada descarga, especialmente en
+// redes móviles lentas. Ahora el resultado (o el `null` del fallback) se
+// cachea en memoria del módulo la primera vez, en una promesa compartida
+// — si dos exportaciones se disparan casi al mismo tiempo, ambas esperan
+// el mismo fetch en vez de lanzar uno cada una.
+let isotipoPromise = null;
+function loadIsotipoBase64() {
+  if (!isotipoPromise) {
+    isotipoPromise = (async () => {
+      try {
+        const res = await fetch(LOGO_URL);
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        return await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('No se pudo leer el isotipo'));
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        return null;
+      }
+    })().catch(() => null);
   }
+  return isotipoPromise;
 }
 
 function drawHeader(doc, logo, title, subtitle) {
@@ -209,6 +225,25 @@ function sectionTable(doc, startY, sectionLabel, columns, rows, accent) {
   return doc.lastAutoTable.finalY + 12;
 }
 
+// Nombre de archivo legible y único por descarga: sección + fecha + hora
+// (minutos), p.ej. "EMCOEX_Cierres_2026-08-13_0830.pdf". Antes se usaba
+// `Date.now()` (epoch en milisegundos) al final del nombre — evitaba
+// colisiones igual de bien, pero era ilegible para el usuario al mirar su
+// carpeta de descargas. Incluir minutos (no solo la fecha) alcanza para
+// separar dos exportaciones de la misma sección en la misma sesión sin
+// llegar a un timestamp completo.
+function buildFileName(label) {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const fecha = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const hora = `${pad(now.getHours())}${pad(now.getMinutes())}`;
+  const slug = label
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // sin acentos
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return `EMCOEX_${slug}_${fecha}_${hora}.pdf`;
+}
+
 const SECTION_BUILDERS = {
   cierres: (rows) => ({
     columns: ['Mes', 'Ingresos', 'Costos', 'Margen', 'Despachos'],
@@ -253,7 +288,7 @@ export async function exportSectionPdf(sectionKey, sectionLabel, records) {
     doc.text('No hay registros capturados todavía en esta sección.', 14, y);
   }
   drawFooter(doc);
-  doc.save(`emcoex-${sectionKey}-${Date.now()}.pdf`);
+  doc.save(buildFileName(sectionLabel));
 }
 
 export async function exportGeneralPdf(dataBySection) {
@@ -292,5 +327,5 @@ export async function exportGeneralPdf(dataBySection) {
   });
 
   drawFooter(doc);
-  doc.save(`emcoex-reporte-general-${Date.now()}.pdf`);
+  doc.save(buildFileName('Reporte_general'));
 }

@@ -1,5 +1,34 @@
 # CHANGELOG — Agenda Presidencial Emcoex
 
+## Iteración 4 — Fiabilidad de exportaciones repetidas de PDF + documentación sincronizada
+
+Estado: ✅ Completada
+
+Contexto: los PDFs se generaban correctamente en el primer intento, pero exportar varias veces seguidas (sin recargar la página) era una experiencia inconsistente en móvil. Investigación en `src/lib/pdfReport.js` y en los 3 botones que llaman a `exportSectionPdf`/`exportGeneralPdf` (`AgendaScreen.jsx`): la causa no estaba en jsPDF ni en `doc.save()` (que ya generaba un nombre de archivo distinto en cada llamada vía `Date.now()`, así que no había colisión de archivos). La causa real era de UI: los `onClick` llamaban a las funciones de exportación (`async`) directo, sin ningún estado de carga, sin `disabled`, y sin `try/catch`. Eso permitía dos problemas concretos en táctil/móvil: (1) un segundo toque mientras la primera exportación todavía corría disparaba una segunda ejecución concurrente — cada una con su propio `fetch` del isotipo y su propio `doc.save()` compitiendo por el mismo hilo — y (2) si algo fallaba, el error quedaba silencioso (ninguna señal visible), así que el usuario volvía a tocar pensando que no había pasado nada, agravando (1).
+
+Cambios:
+
+- **`src/components/screens/AgendaScreen.jsx`**: los 3 botones de exportación (2× "Reporte general PDF"/"Exportar reporte general" en el sidebar y el header del dashboard, 1× "PDF de esta sección" en `SectionView`) ahora pasan por handlers propios (`handleExportGeneral` en `AgendaScreen`, `handleExportSection` en `SectionView`) que: ignoran el click si ya hay una exportación en curso del mismo tipo (`exportingGeneral`/`exportingSection`, estado nuevo), muestran el mismo patrón de carga que ya usaba el botón de login con Google (ícono `loader-2` + `animate-spin`, texto "Generando…"), y en `finally` liberan el estado sin importar si la exportación terminó bien o mal — el botón queda disponible de inmediato para la siguiente descarga, nunca se queda "colgado" en loading. Si `exportSectionPdf`/`exportGeneralPdf` lanza un error, se captura y se muestra con el mismo `useToast` que ya usan `handleSave`/`handleDelete`, en vez de fallar en silencio.
+- **`src/lib/pdfReport.js`**:
+  - `loadIsotipoBase64()` (fetch del isotipo + conversión a base64) ahora cachea su resultado en una promesa a nivel de módulo la primera vez que se llama, en vez de repetir `fetch` → `Blob` → `FileReader` en cada exportación — el isotipo es un PNG estático que nunca cambia entre descargas de la misma sesión. Si dos exportaciones se disparan casi al mismo tiempo, ambas esperan la misma promesa en vez de lanzar un `fetch` cada una. No era la causa del bloqueo, pero sí trabajo de red redundante que convenía eliminar mientras se tocaba este archivo.
+  - Nombres de archivo: antes `emcoex-<seccion>-<Date.now()>.pdf` (timestamp en milisegundos, ilegible). Ahora `buildFileName()` arma `EMCOEX_<Seccion>_YYYY-MM-DD_HHmm.pdf` (p.ej. `EMCOEX_Cierres_2026-08-13_0830.pdf`) — sigue siendo único por minuto sin necesitar el epoch completo, y es legible en la carpeta de descargas del usuario.
+  - Sin cambios en el diseño del PDF (portada, encabezado, tarjetas de KPI, tablas, footer): esta iteración es fiabilidad de generación/descarga, no rediseño.
+- **`vite.config.js`**: identidad del manifest PWA corregida — `name`/`description` todavía decían `"EMCOEX | ERP-Comex"` / `"ERP-Comex: plataforma de gestión de comercio exterior de EMCOEX Lara."` (arrastrado del proyecto original, nunca actualizado en la Iteración 3 cuando se corrigió `index.html`). Ahora `"EMCOEX | Agenda Presidencial"` con una descripción que refleja el producto actual. No se tocaron íconos ni ningún otro campo del manifest.
+- **`README.md`**: reescrito por completo — describía la app como un "pivote" del ERP con datos en LocalStorage "listos para migrarse a Supabase cuando se decida" (desactualizado desde la Iteración 1: la migración a Supabase ya está hecha y en producción) y presentaba `VITE_PRESIDENTE_EMAIL` como obligatorio. Ahora documenta el stack real (Supabase para auth y persistencia, no solo auth), y aclara que el filtro por email es opcional y está sin definir a propósito en la etapa actual de pruebas.
+- **`.env.example`**: el comentario sobre `VITE_PRESIDENTE_EMAIL` decía "Único filtro de acceso... cualquier otra cuenta verá 'no autorizado'" sin aclarar que es opcional. Ahora dice explícitamente que si se deja sin definir (como está hoy), cualquier cuenta de Google entra.
+- **`AGENTS.md`**: la regla 1 de "REGLAS DE ESTE PROYECTO" describía la autorización por `VITE_PRESIDENTE_EMAIL` sin mencionar que es opcional ni que hoy está deliberadamente sin definir. Corregida para que quede explícito, y para dejar claro que no se debe reintroducir una whitelist fija en código — el filtro sigue siendo esa única variable de entorno. El resto del documento (arquitectura, stack, historial de iteraciones, referencias a `Emcoex-Sistema-App`/localStorage) ya representaba el estado real del proyecto — revisado, sin más cambios necesarios.
+
+No se tocó: diseño visual del PDF, `AuthContext.jsx` (autorización sigue siendo la misma lógica, solo se corrigió cómo se documenta), `supabaseClient.js`, RLS, ni ningún otro componente fuera de los listados arriba.
+
+Verificación:
+
+- `npm ci` — sin errores.
+- `npm run build` — sin errores (2048 módulos transformados, `dist/` generado con manifest y service worker). No existe script `lint` en `package.json` (confirmado en `package.json`, no se agregó uno — fuera del alcance de esta iteración).
+- Exportación repetida de PDF: verificado por inspección de código y build (los handlers nuevos se ejercitan en el bundle generado), **no** con un navegador interactivo real — este entorno de trabajo no tiene uno disponible (mismo límite ya documentado en la Iteración 2). No se afirma haber probado la descarga móvil real; queda como verificación manual pendiente antes de dar por cerrada la iteración en producción.
+- `git diff` revisado: solo los archivos listados en "Archivos modificados" de esta entrada, sin cambios accidentales de diseño, arquitectura o dependencias.
+
+---
+
 ## Iteración 3 — Fix de pantalla en blanco (base de Vite desincronizada) + ErrorBoundary
 
 Estado: ✅ Completada

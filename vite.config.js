@@ -68,9 +68,9 @@ export default defineConfig({
       // recortan estos íconos a distintas formas (círculo, squircle, etc.)
       // y sin ese margen de seguridad las puntas del sol quedarían cortadas.
       manifest: {
-        name: 'EMCOEX | ERP-Comex',
+        name: 'EMCOEX | Agenda Presidencial',
         short_name: 'EMCOEX',
-        description: 'ERP-Comex: plataforma de gestión de comercio exterior de EMCOEX Lara.',
+        description: 'Agenda ejecutiva de presidencia de EMCOEX Lara: cierres mensuales, despachos y proveedores, con KPIs y reportes PDF.',
         start_url: '.',
         display: 'standalone',
         background_color: '#fbf9f5',
