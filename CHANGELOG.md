@@ -1,5 +1,11 @@
 # CHANGELOG — Agenda Presidencial Emcoex
 
+## Infraestructura de despliegue — Conexión Vercel↔GitHub
+
+Estado: ✅ Completada
+
+El despliegue pasa de subida manual (ZIP arrastrado a mano, reemplazando el árbol completo cada vez y perdiendo `public/brand`/`public/icons` en cada iteración de solo-código) a integración Git: Vercel despliega automáticamente desde `main` en cada push, igual que ya hacía GitHub Actions para GitHub Pages. Los assets de marca quedan versionados en el repo de forma permanente — un push que solo toca código nunca vuelve a tocarlos.
+
 ## Iteración 5 — Distribución y Destinos (Despachos)
 
 Estado: ✅ Completada (build no verificado en este entorno — ver nota abajo)
