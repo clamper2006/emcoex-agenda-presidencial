@@ -127,3 +127,47 @@ create policy agenda_proveedores_delete on public.agenda_proveedores
 create index if not exists idx_agenda_cierres_usuario_mes on public.agenda_cierres (usuario_id, mes);
 create index if not exists idx_agenda_despachos_usuario_fecha on public.agenda_despachos (usuario_id, fecha desc);
 create index if not exists idx_agenda_proveedores_usuario_nombre on public.agenda_proveedores (usuario_id, nombre);
+
+-- ============================================================================
+-- Iteración: Distribución y Destinos (Despachos) — migración incremental
+-- ============================================================================
+-- Segura sobre una base con datos existentes:
+--  - Todas las columnas nuevas son NULLABLE -> las filas ya existentes
+--    (creadas antes de esta iteración) quedan válidas tal cual, sin valor
+--    en estos campos.
+--  - Solo ADD COLUMN IF NOT EXISTS / DO block con guarda de existencia
+--    para los CHECK -> se puede volver a correr este archivo completo
+--    sobre una instalación que ya tiene esta iteración aplicada, sin error.
+--  - No se toca RLS, las políticas existentes, usuario_id, ni se hace
+--    DROP de nada. No se crea una tabla nueva: se amplía agenda_despachos.
+--
+-- `monto` (ya existente, NOT NULL) NO cambia de tipo ni de restricción:
+-- sigue siendo el valor monetario del despacho. Lo que cambia es que
+-- ahora el formulario (ver src/data/agendaConfig.js) lo calcula como
+-- toneladas × precio_tonelada antes de enviarlo, así que sigue llegando
+-- siempre con un número válido.
+-- ============================================================================
+
+alter table public.agenda_despachos add column if not exists producto text;
+alter table public.agenda_despachos add column if not exists toneladas numeric;
+alter table public.agenda_despachos add column if not exists precio_tonelada numeric;
+alter table public.agenda_despachos add column if not exists destino_pais text;
+alter table public.agenda_despachos add column if not exists destino_ciudad text;
+
+-- CHECKs alineados con las validaciones ya pedidas para el formulario
+-- (toneladas > 0, precio_tonelada >= 0). Permiten NULL (registros viejos
+-- o parciales), solo restringen el valor cuando SÍ está presente.
+-- Postgres no soporta "ADD CONSTRAINT IF NOT EXISTS", por eso el guard
+-- manual contra pg_constraint para que el archivo siga siendo idempotente.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'agenda_despachos_toneladas_positive') then
+    alter table public.agenda_despachos
+      add constraint agenda_despachos_toneladas_positive check (toneladas is null or toneladas > 0);
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'agenda_despachos_precio_nonneg') then
+    alter table public.agenda_despachos
+      add constraint agenda_despachos_precio_nonneg check (precio_tonelada is null or precio_tonelada >= 0);
+  end if;
+end $$;

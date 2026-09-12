@@ -4,8 +4,11 @@ import { createClient } from '@supabase/supabase-js';
 // cliente). Ver .env.example. El frontend SOLO necesita la URL del
 // proyecto y la anon key — nunca el Client Secret de Google ni ninguna
 // service role key: esos viven exclusivamente en el panel de Supabase.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Nombres reales configurados en Vercel (ver vite.config.js envPrefix):
+// Vercel rechazó los nombres estándar VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY,
+// así que en este entorno se usan VITESUPABASE_URL / VITESUPABASEANONKEY.
+const supabaseUrl = import.meta.env.VITESUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITESUPABASEANONKEY;
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 

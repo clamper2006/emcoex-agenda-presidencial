@@ -1,6 +1,6 @@
 import Icon from '../common/Icon.jsx';
 
-export default function RecordsTable({ columns, records, onDelete }) {
+export default function RecordsTable({ columns, records, onDelete, onEdit }) {
   return (
     <div className="card p-0 overflow-hidden">
       <div className="overflow-x-auto">
@@ -19,7 +19,10 @@ export default function RecordsTable({ columns, records, onDelete }) {
                 {columns.map((c) => (
                   <td key={c.key} className="px-5 py-3 text-[var(--text-secondary)]">{String(r[c.key] ?? '—')}</td>
                 ))}
-                <td className="px-5 py-3 text-right">
+                <td className="px-5 py-3 text-right whitespace-nowrap">
+                  <button onClick={() => onEdit(r.__raw || r)} className="text-[var(--text-tertiary)] hover:text-[var(--accent)] transition mr-3">
+                    <Icon name="pen-tool" className="w-3.5 h-3.5" />
+                  </button>
                   <button onClick={() => onDelete(r.id)} className="text-[var(--text-tertiary)] hover:text-rose-400 transition">
                     <Icon name="trash-2" className="w-3.5 h-3.5" />
                   </button>

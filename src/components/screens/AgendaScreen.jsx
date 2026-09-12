@@ -9,7 +9,7 @@ import RecordsTable from '../dashboard/RecordsTable.jsx';
 import { useTheme } from '../../context/ThemeContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { getRecords, saveRecord, deleteRecordItem } from '../../utils/storage.js';
+import { getRecords, saveRecord, updateRecord, deleteRecordItem } from '../../utils/storage.js';
 import { hasSeenTour } from '../../utils/onboarding.js';
 import { SECTIONS, computeKpis } from '../../data/agendaConfig.js';
 import { exportGeneralPdf, exportSectionPdf } from '../../lib/pdfReport.js';
@@ -89,17 +89,25 @@ export default function AgendaScreen() {
     setVersion((v) => v + 1);
   }
 
-  async function handleSave(sectionKey, values) {
+  async function handleSave(sectionKey, values, editingId) {
     setBusy(true);
     try {
-      // id/created_at/usuario_id los resuelve Supabase (defaults en el
-      // esquema SQL: gen_random_uuid(), now(), auth.uid()) — el cliente
-      // solo manda los campos del formulario.
-      await saveRecord(SECTIONS[sectionKey].key, values);
-      refresh();
-      showToast('success', 'Guardado', `${SECTIONS[sectionKey].label}: registro agregado.`);
+      if (editingId) {
+        // Edición: se actualiza el registro existente. No se tocan
+        // id/created_at/usuario_id — solo los campos del formulario.
+        await updateRecord(SECTIONS[sectionKey].key, editingId, values);
+        refresh();
+        showToast('success', 'Actualizado', `${SECTIONS[sectionKey].label}: registro editado.`);
+      } else {
+        // id/created_at/usuario_id los resuelve Supabase (defaults en el
+        // esquema SQL: gen_random_uuid(), now(), auth.uid()) — el cliente
+        // solo manda los campos del formulario.
+        await saveRecord(SECTIONS[sectionKey].key, values);
+        refresh();
+        showToast('success', 'Guardado', `${SECTIONS[sectionKey].label}: registro agregado.`);
+      }
     } catch {
-      showToast('error', 'Error', 'No se pudo guardar el registro. Intenta de nuevo.');
+      showToast('error', 'Error', `No se pudo ${editingId ? 'editar' : 'guardar'} el registro. Intenta de nuevo.`);
     } finally {
       setBusy(false);
     }
@@ -136,8 +144,17 @@ export default function AgendaScreen() {
     setExportingGeneral(true);
     try {
       await exportGeneralPdf(dataBySection);
-    } catch {
-      showToast('error', 'Error', 'No se pudo generar el PDF. Intenta de nuevo.');
+    } catch (error) {
+      // Iteración (diagnóstico PDF): el catch anterior era `catch {}` sin
+      // capturar el error — el toast genérico era la única señal, incluso
+      // en consola. Sin poder reproducir la exportación en un navegador
+      // real desde este entorno de trabajo, esta es la instrumentación
+      // que permite ver la causa exacta la próxima vez que ocurra (nombre,
+      // mensaje y stack del error — nada de esto expone tokens, claves ni
+      // datos de Supabase, solo información propia de la excepción de
+      // jsPDF/JS). El mensaje al usuario en el toast NO cambia.
+      console.error('[EMCOEX] Error exportando PDF (reporte general):', error?.name, error?.message, error?.stack);
+      showToast('error', 'Error (diagnóstico)', `${error?.name || 'Error'}: ${error?.message || 'sin mensaje'}`);
     } finally {
       setExportingGeneral(false);
     }
@@ -245,7 +262,7 @@ export default function AgendaScreen() {
             sectionKey={tab}
             records={dataBySection[tab]}
             busy={busy}
-            onSave={(values) => handleSave(tab, values)}
+            onSave={(values, editingId) => handleSave(tab, values, editingId)}
             onDelete={(id) => handleDelete(tab, id)}
             showToast={showToast}
           />
@@ -258,15 +275,29 @@ export default function AgendaScreen() {
 function SectionView({ sectionKey, records, busy, onSave, onDelete, showToast }) {
   const config = SECTIONS[sectionKey];
   const [showForm, setShowForm] = useState(false);
+  const [editingRecord, setEditingRecord] = useState(null); // registro crudo en edición, o null = modo "agregar"
   const [exportingSection, setExportingSection] = useState(false); // ver comentario de handleExportGeneral en AgendaScreen
+
+  function handleToggleForm() {
+    // Alterna el panel; si estaba en modo edición, cerrar/reabrir con este
+    // botón siempre vuelve a modo "agregar" (limpio).
+    setEditingRecord(null);
+    setShowForm((v) => !v);
+  }
+
+  function handleEdit(record) {
+    setEditingRecord(record);
+    setShowForm(true);
+  }
 
   async function handleExportSection() {
     if (exportingSection) return;
     setExportingSection(true);
     try {
       await exportSectionPdf(sectionKey, config.label, records);
-    } catch {
-      showToast('error', 'Error', 'No se pudo generar el PDF. Intenta de nuevo.');
+    } catch (error) {
+      console.error(`[EMCOEX] Error exportando PDF (sección ${config.label}):`, error?.name, error?.message, error?.stack);
+      showToast('error', 'Error (diagnóstico)', `${error?.name || 'Error'}: ${error?.message || 'sin mensaje'}`);
     } finally {
       setExportingSection(false);
     }
@@ -284,7 +315,7 @@ function SectionView({ sectionKey, records, busy, onSave, onDelete, showToast })
             <Icon name={exportingSection ? 'loader-2' : 'file-down'} className={`w-4 h-4 ${exportingSection ? 'animate-spin' : ''}`} />
             {exportingSection ? 'Generando…' : 'PDF de esta sección'}
           </button>
-          <button disabled={busy} onClick={() => setShowForm((v) => !v)} className="btn-primary rounded-xl py-2.5 px-4 text-sm font-semibold flex items-center gap-2 disabled:opacity-60">
+          <button disabled={busy} onClick={handleToggleForm} className="btn-primary rounded-xl py-2.5 px-4 text-sm font-semibold flex items-center gap-2 disabled:opacity-60">
             <Icon name={showForm ? 'x' : 'plus'} className="w-4 h-4" /> {showForm ? 'Cerrar' : 'Agregar'}
           </button>
         </div>
@@ -293,17 +324,26 @@ function SectionView({ sectionKey, records, busy, onSave, onDelete, showToast })
       {showForm && (
         <div className="card p-5">
           <DynamicForm
+            key={editingRecord?.id || 'new'}
             fields={config.fields}
-            onSubmit={(values) => { onSave(values); setShowForm(false); }}
+            initialValues={editingRecord || undefined}
+            submitLabel={editingRecord ? 'Guardar cambios' : 'Guardar'}
+            onSubmit={(values) => { onSave(values, editingRecord?.id); setShowForm(false); setEditingRecord(null); }}
           />
         </div>
       )}
 
       {records.length ? (
         <RecordsTable
-          columns={config.fields.map((f) => ({ key: f.name, label: f.label }))}
-          records={records}
+          // Si la sección define `tableColumns`/`deriveRow` (ver
+          // agendaConfig.js -> despachos), se usan para mostrar orden de
+          // negocio y valores derivados (p.ej. Destino combinado, montos
+          // formateados, '—' para campos ausentes en registros viejos).
+          // Si no, se conserva el comportamiento original 1:1 con `fields`.
+          columns={config.tableColumns || config.fields.map((f) => ({ key: f.name, label: f.label }))}
+          records={config.deriveRow ? records.map(config.deriveRow) : records}
           onDelete={onDelete}
+          onEdit={handleEdit}
         />
       ) : (
         <div className="card p-10">

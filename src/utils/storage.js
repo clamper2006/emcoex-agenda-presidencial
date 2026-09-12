@@ -47,6 +47,21 @@ export async function saveRecord(key, values) {
   return data;
 }
 
+export async function updateRecord(key, id, values) {
+  const { data, error } = await supabase
+    .from(key)
+    .update(values)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(`[Supabase] Error editando en ${key}:`, error.message);
+    throw error;
+  }
+  return data;
+}
+
 export async function deleteRecordItem(key, id) {
   const { error } = await supabase
     .from(key)

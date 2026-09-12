@@ -51,7 +51,7 @@ export function AuthProvider({ children }) {
 
   async function signInWithGoogle() {
     if (!isSupabaseConfigured) {
-      throw new Error('Supabase no está configurado (faltan VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).');
+      throw new Error('Supabase no está configurado (faltan VITESUPABASE_URL / VITESUPABASEANONKEY).');
     }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',

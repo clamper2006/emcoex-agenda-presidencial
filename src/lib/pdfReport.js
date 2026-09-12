@@ -52,12 +52,25 @@ function loadIsotipoBase64() {
         const res = await fetch(LOGO_URL);
         if (!res.ok) return null;
         const blob = await res.blob();
-        return await new Promise((resolve, reject) => {
+        const dataUrl = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result);
           reader.onerror = () => reject(new Error('No se pudo leer el isotipo'));
           reader.readAsDataURL(blob);
         });
+        // Guarda de contenido: `res.ok` (status 200) NO garantiza que la
+        // respuesta sea realmente el PNG. Si el `base` de build no
+        // coincide con dónde se sirve la app (ver vite.config.js), o si
+        // algún hosting resuelve rutas desconocidas devolviendo el propio
+        // index.html con status 200 en vez de un 404 real, `res.blob()`
+        // sería HTML disfrazado de "logo cargado con éxito". Pasar eso a
+        // `doc.addImage(logo, 'PNG', ...)` hace que jsPDF intente
+        // decodificar HTML como PNG y lance una excepción real dentro del
+        // flujo de generación — el PDF completo fallaría por un problema
+        // que en realidad es solo cosmético (falta el logo). Se valida el
+        // encabezado del data URL antes de devolverlo: si no es
+        // exactamente un PNG, se trata igual que "logo no disponible".
+        return dataUrl.startsWith('data:image/png') ? dataUrl : null;
       } catch {
         return null;
       }
@@ -73,8 +86,17 @@ function drawHeader(doc, logo, title, subtitle) {
 
   let textX = 14;
   if (logo) {
-    doc.addImage(logo, 'PNG', 14, 7, 10, 10);
-    textX = 27;
+    // Requisito: el logo nunca debe poder tumbar la exportación completa.
+    // Ya se valida el content-type antes de llegar acá (loadIsotipoBase64),
+    // pero esta guarda es la última línea de defensa: si `doc.addImage`
+    // lanza por cualquier otro motivo (dato corrupto, tamaño inválido,
+    // etc.), el PDF sigue generándose sin logo en vez de fallar entero.
+    try {
+      doc.addImage(logo, 'PNG', 14, 7, 10, 10);
+      textX = 27;
+    } catch (err) {
+      console.error('[EMCOEX] No se pudo dibujar el isotipo en el encabezado, se continúa sin logo:', err?.name, err?.message);
+    }
   }
 
   doc.setTextColor(255, 255, 255);
@@ -124,7 +146,12 @@ function drawCoverPage(doc, logo, reportTitle) {
   const centerX = pageWidth / 2;
 
   if (logo) {
-    doc.addImage(logo, 'PNG', centerX - 18, 70, 36, 36);
+    try {
+      doc.addImage(logo, 'PNG', centerX - 18, 70, 36, 36);
+    } catch (err) {
+      console.error('[EMCOEX] No se pudo dibujar el isotipo en la portada, se continúa sin logo:', err?.name, err?.message);
+      logo = null; // para que el resto de drawCoverPage recalcule posiciones como "sin logo"
+    }
   }
 
   doc.setTextColor(...NAVY);
@@ -225,7 +252,35 @@ function sectionTable(doc, startY, sectionLabel, columns, rows, accent) {
   return doc.lastAutoTable.finalY + 12;
 }
 
-// Nombre de archivo legible y único por descarga: sección + fecha + hora
+// Iteración (diagnóstico y corrección de exportación PDF): separa
+// explícitamente "generar el resultado" de "descargarlo", en vez de dejar
+// que `doc.save()` haga las dos cosas de forma opaca. Motivo concreto
+// (no "porque parece más moderno" sin razón): `doc.save()` en jsPDF 2.x
+// arma su propio Blob y dispara la descarga con su propio helper interno
+// (FileSaver-style), y en Safari/iOS es un patrón documentado que ese
+// disparo puede fallar en silencio (sin excepción JS que el try/catch
+// pueda atrapar) si ocurre lejos del gesto de click original — acá ya hay
+// trabajo async de por medio (fetch+FileReader del logo, ver
+// loadIsotipoBase64) antes de llegar a este punto. Usar
+// `doc.output('blob')` + `URL.createObjectURL` + un `<a download>` propio
+// da control explícito sobre cada paso y dónde puede fallar cada uno,
+// y es el mecanismo que jsPDF mismo documenta como alternativa cuando
+// `save()` no es confiable en un navegador dado.
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  // Revocar el Object URL asíncronamente: revocarlo en el mismo tick que
+  // el click puede cortar la descarga en algunos navegadores antes de que
+  // terminen de leer el blob. Con setTimeout se libera la memoria sin
+  // arriesgar la descarga misma.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 // (minutos), p.ej. "EMCOEX_Cierres_2026-08-13_0830.pdf". Antes se usaba
 // `Date.now()` (epoch en milisegundos) al final del nombre — evitaba
 // colisiones igual de bien, pero era ilegible para el usuario al mirar su
@@ -253,8 +308,34 @@ const SECTION_BUILDERS = {
     }),
   }),
   despachos: (rows) => ({
-    columns: ['Proveedor', 'Incoterm', 'Estado', 'Fecha', 'Monto'],
-    rows: rows.map((r) => [r.proveedor, r.incoterm, r.estado, r.fecha, `$${Number(r.monto || 0).toLocaleString('es-VE')}`]),
+    // Iteración (Distribución y Destinos): se agregan Producto, Toneladas,
+    // Precio/ton, Total (monto ya existente, ahora calculado en el
+    // formulario) y Destino (país — ciudad combinados en una sola celda).
+    // Cada valor se valida con Number.isFinite antes de formatear para
+    // nunca imprimir undefined/null/NaN/Infinity — registros anteriores a
+    // esta iteración no tienen estos campos y deben verse como '—'.
+    columns: ['Proveedor', 'Producto', 'Toneladas', 'Precio/ton', 'Total', 'Destino', 'Incoterm', 'Estado', 'Fecha', 'Notas'],
+    rows: rows.map((r) => {
+      const numOrDash = (val, fmt) => {
+        const n = Number(val);
+        return val !== null && val !== undefined && val !== '' && Number.isFinite(n) ? fmt(n) : '—';
+      };
+      const destino = (r.destino_pais || r.destino_ciudad)
+        ? [r.destino_pais, r.destino_ciudad].filter(Boolean).join(' — ')
+        : '—';
+      return [
+        r.proveedor || '—',
+        r.producto || '—',
+        numOrDash(r.toneladas, (n) => n.toLocaleString('es-VE')),
+        numOrDash(r.precio_tonelada, (n) => `$${n.toLocaleString('es-VE')}`),
+        numOrDash(r.monto, (n) => `$${n.toLocaleString('es-VE')}`),
+        destino,
+        r.incoterm || '—',
+        r.estado || '—',
+        r.fecha || '—',
+        r.notas || '—',
+      ];
+    }),
   }),
   proveedores: (rows) => ({
     columns: ['Nombre', 'Municipio', 'Rubro', 'Capacidad', 'Contacto'],
@@ -288,7 +369,12 @@ export async function exportSectionPdf(sectionKey, sectionLabel, records) {
     doc.text('No hay registros capturados todavía en esta sección.', 14, y);
   }
   drawFooter(doc);
-  doc.save(buildFileName(sectionLabel));
+  // Fase C (generación) separada de la fase D (descarga): doc.output('blob')
+  // solo arma el PDF en memoria, no toca el DOM ni dispara nada — si algo
+  // falla acá, el error es puramente de construcción del documento, no de
+  // mecanismo de descarga, y el catch de AgendaScreen.jsx lo distingue.
+  const blob = doc.output('blob');
+  downloadBlob(blob, buildFileName(sectionLabel));
 }
 
 export async function exportGeneralPdf(dataBySection) {
@@ -327,5 +413,6 @@ export async function exportGeneralPdf(dataBySection) {
   });
 
   drawFooter(doc);
-  doc.save(buildFileName('Reporte_general'));
+  const blob = doc.output('blob');
+  downloadBlob(blob, buildFileName('Reporte_general'));
 }

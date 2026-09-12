@@ -1,5 +1,23 @@
 # CHANGELOG — Agenda Presidencial Emcoex
 
+## Iteración 5 — Distribución y Destinos (Despachos)
+
+Estado: ✅ Completada (build no verificado en este entorno — ver nota abajo)
+
+Contexto: el cliente necesitaba representar en "Despachos" qué producto se exporta, en qué cantidad (toneladas), a qué precio por tonelada y a qué destino exacto (país + ciudad), con el total calculado automáticamente en vez de digitado a mano.
+
+Cambios:
+
+- **`src/data/agendaConfig.js`**: `SECTIONS.despachos.fields` amplía con `producto` (text, opcional), `toneladas` (number, requerido, `min=0.01`), `precio_tonelada` (number, requerido, `min=0`), `destino_pais` y `destino_ciudad` (text, opcionales). El campo `monto` (ya existente, NOT NULL en el esquema) se convierte en `type: 'computed'` — no se agrega una columna `total` nueva; `monto` sigue siendo el único campo que representa el valor monetario del despacho, ahora resuelto como `toneladas × precio_tonelada` por una función `compute()` genérica (con `computeFrom`/`format`), en vez de digitado a mano. Se agregan `tableColumns` (orden de negocio: Proveedor, Producto, Toneladas, Precio/ton, Total, Destino, Incoterm, Estado, Fecha, Notas) y `deriveRow()` (formatea montos, combina `destino_pais`/`destino_ciudad` en una columna "Destino", y muestra `—` para cualquier campo ausente en registros anteriores a esta iteración) — ambos opcionales y solo definidos para `despachos`; `cierres`/`proveedores` no cambian de comportamiento.
+- **`src/components/dashboard/DynamicForm.jsx`**: soporte genérico (no acoplado a Despachos) para `type: 'computed'` — un campo así se renderiza como texto de solo lectura (no un `<input>`), se recalcula en vivo cuando cambian los campos listados en `computeFrom`, y su resultado final se inyecta directo en `values` en el submit. Si un campo `computed` es `required` y su resultado está pendiente (falta un dato, o es negativo/cero según la regla de `compute()`), el submit se bloquea con un mensaje de error visible — nunca se guarda `NaN`/`Infinity`/vacío.
+- **`src/components/screens/AgendaScreen.jsx`** (`SectionView`): al armar `columns`/`records` para `RecordsTable`, usa `config.tableColumns`/`config.deriveRow` cuando la sección los define, y cae al comportamiento original (`fields` 1:1) cuando no — `RecordsTable.jsx` **no se modificó**, sigue siendo 100% genérico.
+- **`src/lib/pdfReport.js`**: `SECTION_BUILDERS.despachos` agrega columnas Producto/Toneladas/Precio-ton/Total/Destino (Total sigue siendo `monto`); cada valor numérico se valida con `Number.isFinite` antes de formatear, y Destino combina país+ciudad (`"País — Ciudad"`) o muestra `—` si ambos faltan. Sin cambios en portada/encabezado/KPIs/exportación general — el problema de fiabilidad de exportación pendiente se deja para la próxima iteración, según lo indicado.
+- **`supabase/agenda_schema.sql`**: bloque de migración incremental idempotente al final del archivo — `ALTER TABLE public.agenda_despachos ADD COLUMN IF NOT EXISTS` para `producto`, `toneladas`, `precio_tonelada`, `destino_pais`, `destino_ciudad` (todas nullable), más dos `CHECK` (`toneladas IS NULL OR toneladas > 0`, `precio_tonelada IS NULL OR precio_tonelada >= 0`) agregados vía `DO` block con guarda contra `pg_constraint` para poder re-ejecutar el archivo sin error. No se tocó RLS, políticas, `usuario_id`, ni se hizo `DROP` de nada. `monto` no cambió de tipo ni de restricción `NOT NULL`.
+
+Compatibilidad verificada por inspección de código (no en runtime, ver nota): registros de `agenda_despachos` creados antes de esta iteración no tienen `producto`/`toneladas`/`precio_tonelada`/`destino_pais`/`destino_ciudad` → `deriveRow()` y el builder del PDF los tratan como ausentes y muestran `—`, nunca `undefined`/`null`/`NaN`. `monto` de esos registros viejos ya existía (era obligatorio antes de esta iteración también) y se sigue mostrando con su valor real.
+
+**Nota de verificación:** el entorno de desarrollo usado para esta iteración no tiene acceso de red saliente (egress bloqueado), por lo que `npm install`/`npm run build` no pudieron ejecutarse aquí. Se revisó manualmente balance de llaves/paréntesis en los 4 archivos JS/JSX/SQL modificados y se trazaron a mano los 4 casos de prueba pedidos (10t×$2.500, 5,5t×$1.800, ambos vacíos, registro viejo sin campos nuevos). El build real de producción queda pendiente de correr en el pipeline de Vercel en la etapa de despliegue.
+
 ## Iteración 4 — Fiabilidad de exportaciones repetidas de PDF + documentación sincronizada
 
 Estado: ✅ Completada

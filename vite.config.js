@@ -10,8 +10,30 @@ import tailwindcss from '@tailwindcss/vite';
 // Confirmado: https://clamper2006.github.io/emcoex-agenda-presidencial/
 const REPO_NAME = 'emcoex-agenda-presidencial';
 
+// Iteración (preview Vercel): `base` estaba fijo en `/${REPO_NAME}/` sin
+// importar dónde se sirviera el build. Eso es correcto para GitHub Pages,
+// pero rompe TODO en Vercel (que sirve desde la raíz del dominio, `/`):
+// el HTML generado referencia `/emcoex-agenda-presidencial/assets/*.js`,
+// que no existe ahí, así que ni siquiera el JS de la app llega a
+// cargar — y `import.meta.env.BASE_URL`, que `src/lib/pdfReport.js` usa
+// para construir la URL del isotipo, hereda el mismo valor equivocado.
+// Vercel define `process.env.VERCEL === '1'` en su entorno de build
+// (variable propia de su plataforma, no algo que haya que configurar a
+// mano); GitHub Actions no la define, así que sirve para diferenciar sin
+// inventar una env var nueva ni tocar el workflow de GitHub Pages.
+const isVercelBuild = process.env.VERCEL === '1';
+
 export default defineConfig({
-  base: `/${REPO_NAME}/`,
+  base: isVercelBuild ? '/' : `/${REPO_NAME}/`,
+  // El usuario renombró en Vercel las env vars de Supabase a
+  // VITESUPABASE_URL / VITESUPABASEANONKEY (sin guion bajo tras VITE)
+  // porque Vercel le rechazó el nombre estándar. Vite por defecto SOLO
+  // expone al cliente variables con el prefijo "VITE_" exacto -> sin este
+  // envPrefix ampliado, esos dos nombres quedarían invisibles para
+  // import.meta.env aunque existan en Vercel. Se AMPLÍA (no se reemplaza)
+  // el prefijo por defecto para no perder VITE_PRESIDENTE_EMAIL ni
+  // ninguna otra variable VITE_ estándar.
+  envPrefix: ['VITE_', 'VITESUPABASE'],
   // El bundle creció al agregar @supabase/supabase-js (Iteración 9): es
   // una librería grande porque empaqueta auth + postgrest + realtime +
   // storage juntos, aunque solo usemos auth y una consulta simple. No

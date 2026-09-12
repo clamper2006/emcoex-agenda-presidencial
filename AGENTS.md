@@ -136,6 +136,13 @@ emcoex-agenda-presidencial/
 2. **`update` de registros no tiene UI todavía** — las políticas RLS de `update` ya existen en el esquema SQL (por si se necesitan a futuro), pero ningún componente las usa hoy: solo hay alta (`insert`) y baja (`delete`), no edición.
 3. **Isotipo del PDF depende de `fetch` al mismo origen** (Iteración 2) — si algún día el hosting de `public/brand/` cambia a un CDN externo con CORS restrictivo, el fallback a solo texto en el header/portada del PDF se activa en silencio, sin avisar al usuario que el logo no se pudo embeber. No es un problema hoy (GitHub Pages, mismo origen), pero vale la pena un toast de aviso si eso cambia.
 
+## Distribución y Destinos en Despachos (Iteración 5)
+
+- `agenda_despachos` ahora tiene `producto`, `toneladas`, `precio_tonelada`, `destino_pais`, `destino_ciudad` (todas nullable — ver bloque de migración al final de `supabase/agenda_schema.sql`). `monto` (NOT NULL, ya existente) no cambió de columna ni de restricción: sigue siendo el valor monetario del despacho, pero ahora el formulario lo calcula (`toneladas × precio_tonelada`) en vez de aceptarlo digitado a mano — no existe una columna `total` separada.
+- `DynamicForm.jsx` soporta un `type: 'computed'` genérico en `agendaConfig.js` (no exclusivo de Despachos): un campo con `computeFrom`/`compute`/`format` se recalcula en vivo y bloquea el submit mientras el resultado sea `null` (dato faltante o inválido), en vez de guardar `NaN`/vacío.
+- `SectionView` (`AgendaScreen.jsx`) usa `config.tableColumns`/`config.deriveRow` cuando la sección los define (hoy solo `despachos`) para mostrar orden de columnas de negocio y un "Destino" combinado (`País — Ciudad`); si la sección no los define, se comporta igual que antes. `RecordsTable.jsx` sigue sin tocarse, 100% genérico.
+- Registros de `agenda_despachos` anteriores a esta iteración no tienen los campos nuevos — tabla y PDF los muestran como `—`, nunca `undefined`/`null`/`NaN`.
+
 ## Decisiones de arquitectura pendientes
 
 - Si en el futuro se necesita editar un registro ya guardado (no solo crear/borrar), se puede agregar sin tocar el esquema SQL — las políticas `update` ya están.
