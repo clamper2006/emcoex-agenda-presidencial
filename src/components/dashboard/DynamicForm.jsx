@@ -11,7 +11,7 @@ import Icon from '../common/Icon.jsx';
 // para los campos que participan en algún cálculo en vivo: los que un
 // campo `computed` declara en `computeFrom`, para poder recalcular el
 // resultado en cada cambio y mostrarlo antes de guardar.
-export default function DynamicForm({ fields, onSubmit, initialValues, submitLabel }) {
+export default function DynamicForm({ fields, onSubmit, initialValues, submitLabel, externalData }) {
   const formRef = useRef(null);
   // Modo edición: initialValues precarga tanto los <input>/<select> no
   // controlados (vía defaultValue) como liveValues (para que un campo
@@ -29,10 +29,13 @@ export default function DynamicForm({ fields, onSubmit, initialValues, submitLab
   const computedResults = useMemo(() => {
     const results = {};
     computedFields.forEach((f) => {
-      results[f.name] = f.compute ? f.compute(liveValues) : null;
+      // externalData se pasa siempre como 2do argumento — campos que no
+      // lo necesitan (ej. despachos.monto, que solo depende de otros
+      // campos del mismo formulario) simplemente lo ignoran.
+      results[f.name] = f.compute ? f.compute(liveValues, externalData) : null;
     });
     return results;
-  }, [computedFields, liveValues]);
+  }, [computedFields, liveValues, externalData]);
 
   function handleLiveChange(name, value) {
     setLiveValues((prev) => ({ ...prev, [name]: value }));

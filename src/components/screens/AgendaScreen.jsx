@@ -6,6 +6,7 @@ import LineChart from '../dashboard/LineChart.jsx';
 import DonutChart from '../dashboard/DonutChart.jsx';
 import DynamicForm from '../dashboard/DynamicForm.jsx';
 import RecordsTable from '../dashboard/RecordsTable.jsx';
+import WeeklySummary from '../dashboard/WeeklySummary.jsx';
 import { useTheme } from '../../context/ThemeContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -16,6 +17,7 @@ import { exportGeneralPdf, exportSectionPdf } from '../../lib/pdfReport.js';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
+  { id: 'resumen-semanal', label: 'Resumen semanal', icon: 'calendar-range' },
   { id: 'cierres', label: 'Cierres mensuales', icon: 'calendar-check' },
   { id: 'despachos', label: 'Despachos', icon: 'ship' },
   { id: 'proveedores', label: 'Proveedores', icon: 'building-2' },
@@ -257,7 +259,17 @@ export default function AgendaScreen() {
           </div>
         )}
 
-        {!loading && tab !== 'dashboard' && (
+        {!loading && tab === 'resumen-semanal' && (
+          <WeeklySummary despachos={dataBySection.despachos} />
+        )}
+
+        {/* SECTIONS[tab] (en vez de `tab !== 'dashboard'`) porque ahora hay
+            dos tabs que no son secciones CRUD de agendaConfig.js: dashboard
+            y resumen-semanal. Chequear contra SECTIONS es lo que de verdad
+            distingue "esto tiene formulario/tabla" de "esto no", en vez de
+            ir sumando exclusiones a mano cada vez que se agregue una vista
+            nueva de solo lectura. */}
+        {!loading && SECTIONS[tab] && (
           <SectionView
             sectionKey={tab}
             records={dataBySection[tab]}
@@ -265,6 +277,7 @@ export default function AgendaScreen() {
             onSave={(values, editingId) => handleSave(tab, values, editingId)}
             onDelete={(id) => handleDelete(tab, id)}
             showToast={showToast}
+            externalData={{ despachos: dataBySection.despachos }}
           />
         )}
       </main>
@@ -272,7 +285,7 @@ export default function AgendaScreen() {
   );
 }
 
-function SectionView({ sectionKey, records, busy, onSave, onDelete, showToast }) {
+function SectionView({ sectionKey, records, busy, onSave, onDelete, showToast, externalData }) {
   const config = SECTIONS[sectionKey];
   const [showForm, setShowForm] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null); // registro crudo en edición, o null = modo "agregar"
@@ -329,6 +342,7 @@ function SectionView({ sectionKey, records, busy, onSave, onDelete, showToast })
             initialValues={editingRecord || undefined}
             submitLabel={editingRecord ? 'Guardar cambios' : 'Guardar'}
             onSubmit={(values) => { onSave(values, editingRecord?.id); setShowForm(false); setEditingRecord(null); }}
+            externalData={externalData}
           />
         </div>
       )}

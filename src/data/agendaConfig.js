@@ -3,6 +3,8 @@
 // isSupabaseConfigured=true en el futuro -> estas mismas keys deberían
 // mapear 1:1 a tablas de Supabase (ver erp_comex_schema.sql como base).
 
+import { getMonthRangeFromMesValue, summarizeDespachos } from '../lib/despachosSummary.js';
+
 export const SECTIONS = {
   cierres: {
     key: 'agenda_cierres',
@@ -10,7 +12,32 @@ export const SECTIONS = {
     icon: 'calendar-check',
     fields: [
       { name: 'mes', label: 'Mes', type: 'month', required: true },
-      { name: 'ingresos', label: 'Ingresos (USD)', type: 'number', required: true },
+      {
+        name: 'ingresos',
+        label: 'Ingresos (USD)',
+        type: 'computed',
+        required: true,
+        computeFrom: ['mes'],
+        // Iteración (vínculo Despachos → Cierres): antes era un número
+        // escrito a mano, sin ninguna relación con Despachos — cada uno
+        // vivía en su propia tabla, lo que producía cifras que no
+        // cuadraban entre sí (un despacho de $10M sin relación con el
+        // cierre mensual del mismo período). Ahora se calcula sumando
+        // despachos.monto de todos los despachos cuya `fecha` cae dentro
+        // del mes elegido (misma función que usa Resumen semanal, ver
+        // src/lib/despachosSummary.js) — así ambos números salen
+        // siempre de la misma fuente y nunca pueden desalinearse. Un mes
+        // sin despachos da $0 (válido, no bloquea guardar); `null` solo
+        // antes de elegir mes.
+        compute: (v, externalData) => {
+          const range = getMonthRangeFromMesValue(v.mes);
+          if (!range) return null;
+          return summarizeDespachos(externalData?.despachos, range).totalIngresos;
+        },
+        format: (total) => (total == null
+          ? 'Selecciona un mes para calcular'
+          : `$${Number(total).toLocaleString('es-VE')} USD (calculado desde Despachos)`),
+      },
       { name: 'costos', label: 'Costos (USD)', type: 'number', required: true },
       { name: 'despachos_cerrados', label: 'Despachos cerrados', type: 'number', required: true },
       { name: 'notas', label: 'Notas', type: 'textarea' },
@@ -25,9 +52,16 @@ export const SECTIONS = {
     // tabla del PDF, ver src/lib/pdfReport.js). No se crea una columna
     // `total` nueva -> `monto` pasa a ser un campo `computed` (toneladas ×
     // precio_tonelada), calculado en vivo por DynamicForm y enviado ya
-    // resuelto en el submit. Ningún KPI del dashboard depende de
-    // despachos.monto (computeKpis() solo usa `cierres`), así que este
-    // cambio no afecta el Dashboard.
+    // resuelto en el submit.
+    //
+    // Actualización (vínculo Despachos → Cierres): la nota original de
+    // esta sección decía que ningún KPI del Dashboard dependía de
+    // despachos.monto porque computeKpis() solo lee `cierres`. Eso seguía
+    // siendo técnicamente cierto pero ya no es la historia completa:
+    // computeKpis() sigue leyendo solo `cierres.ingresos`, pero ese valor
+    // ahora se calcula (arriba, campo `ingresos`) sumando despachos.monto
+    // del mes correspondiente. El Dashboard sí depende de Despachos ahora,
+    // solo que indirectamente, vía el cierre de ese mes.
     fields: [
       { name: 'proveedor', label: 'Proveedor', type: 'text', required: true },
       { name: 'producto', label: 'Producto', type: 'text' },

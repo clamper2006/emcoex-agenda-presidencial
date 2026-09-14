@@ -1,4 +1,4 @@
-import { Activity, AlertCircle, AlertTriangle, Archive, ArrowLeft, ArrowRight, Award, BarChart3, BookOpen, Boxes, Briefcase, Building2, Calculator, CalendarCheck, Camera, Car, Check, CheckCircle, CheckSquare, ClipboardCheck, ClipboardList, Clock, CreditCard, DollarSign, FileBarChart, FileCheck, FileDown, FileSearch, FileText, Files, Flag, FolderOpen, GitCommit, Globe, HelpCircle, History, Inbox, Info, Landmark, LayoutDashboard, ListChecks, Loader2, Lock, LogOut, Mail, Map, MapPin, Menu, Moon, PenTool, Percent, PieChart, Plus, RefreshCw, Route, Save, Search, Settings, Shield, ShieldAlert, ShieldCheck, Ship, Star, Sun, Target, Timer, Trash2, TrendingDown, TrendingUp, Truck, Users, Warehouse, X, Zap } from 'lucide-react';
+import { Activity, AlertCircle, AlertTriangle, Archive, ArrowLeft, ArrowRight, Award, BarChart3, BookOpen, Boxes, Briefcase, Building2, Calculator, CalendarCheck, CalendarRange, Camera, Car, Check, CheckCircle, CheckSquare, ClipboardCheck, ClipboardList, Clock, CreditCard, DollarSign, FileBarChart, FileCheck, FileDown, FileSearch, FileText, Files, Flag, FolderOpen, GitCommit, Globe, HelpCircle, History, Inbox, Info, Landmark, LayoutDashboard, ListChecks, Loader2, Lock, LogOut, Mail, Map, MapPin, Menu, Moon, PenTool, Percent, PieChart, Plus, RefreshCw, Route, Save, Search, Settings, Shield, ShieldAlert, ShieldCheck, Ship, Star, Sun, Target, Timer, Trash2, TrendingDown, TrendingUp, Truck, Users, Warehouse, X, Zap } from 'lucide-react';
 
 // Antes los íconos venían de data-lucide="nombre-kebab" + el script CDN de
 // unpkg (lucide.createIcons()). Ahora usamos el paquete lucide-react
@@ -26,6 +26,7 @@ const ICONS = {
   'building-2': Building2,
   'calculator': Calculator,
   'calendar-check': CalendarCheck,
+  'calendar-range': CalendarRange,
   'camera': Camera,
   'car': Car,
   'check': Check,
